@@ -6,7 +6,7 @@ updates:
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
 
@@ -29,13 +29,13 @@ updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"
 
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: daily
+      interval: weekly
     assignees:
       - "fredclausen"

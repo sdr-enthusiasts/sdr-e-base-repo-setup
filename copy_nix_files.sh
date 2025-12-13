@@ -8,6 +8,7 @@ FILES="
 flake.nix
 .envrc
 .github/workflows/lint.yaml
+renovate.json
 "
 
 warn() {

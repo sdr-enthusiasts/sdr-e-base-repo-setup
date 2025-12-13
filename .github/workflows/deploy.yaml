@@ -12,15 +12,6 @@ on:
         type: boolean
         description: "Use base image testpr"
         default: false
-  push:
-    branches:
-      - main
-    # Don't trigger if it's just a documentation update
-    paths:
-      - "rust/**"
-      - "Dockerfile"
-      - "Dockerfile.build_binary"
-      - "rootfs/**"
 
 jobs:
   workflow-dispatch:

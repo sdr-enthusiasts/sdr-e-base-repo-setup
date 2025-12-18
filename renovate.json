@@ -8,19 +8,11 @@
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
-    "schedule": [
-      "* 0 1 * *"
-    ]
+    "schedule": ["* 0 1 * *"]
   },
   "timezone": "Etc/UTC",
-  "schedule": [
-    "* 0 1 * *"
-  ],
-  "enabledManagers": [
-    "nix",
-    "github-actions",
-    "dockerfile"
-  ],
+  "schedule": ["* 0 1 * *"],
+  "enabledManagers": ["nix", "github-actions", "dockerfile"],
   "prConcurrentLimit": 0,
   "prHourlyLimit": 0,
   "prCreation": "immediate",
@@ -37,25 +29,13 @@
   },
   "packageRules": [
     {
-      "matchManagers": [
-        "github-actions",
-        "nix"
-      ],
-      "matchUpdateTypes": [
-        "major",
-        "minor",
-        "patch",
-        "pin"
-      ],
+      "matchManagers": ["github-actions", "nix"],
+      "matchUpdateTypes": ["major", "minor", "patch", "pin"],
       "automerge": true
     },
     {
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchPackageNames": [
-        "/^ghcr\\.io/sdr-enthusiasts/.*$/"
-      ],
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/^ghcr\\.io/sdr-enthusiasts/.*$/"],
       "enabled": false
     }
   ]

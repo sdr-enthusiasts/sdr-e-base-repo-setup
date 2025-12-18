@@ -21,12 +21,6 @@
   "nix": {
     "enabled": true
   },
-  "github-actions": {
-    "fileMatch": [
-      "(^|/)\\.github/workflows/.*\\.ya?ml$",
-      "(^|/)workflows/.*\\.ya?ml$"
-    ]
-  },
   "packageRules": [
     {
       "matchManagers": ["github-actions", "nix"],

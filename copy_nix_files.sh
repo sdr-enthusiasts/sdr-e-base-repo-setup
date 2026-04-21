@@ -149,6 +149,8 @@ fi
 # ──────────────────────────────────────────────────────────────
 # Copy base files (supports src:dst renames)
 # ──────────────────────────────────────────────────────────────
+FLAKE_COPIED=0
+RENOVATE_COPIED=0
 for entry in $FILES; do
     case "$entry" in
     *:*)
@@ -177,7 +179,115 @@ for entry in $FILES; do
     run mkdir -p "$(dirname "$dst")"
     run cp "$src" "$dst"
     info "File copied: $src_rel → $dst_rel"
+
+    case "$dst_rel" in
+    flake.nix)     FLAKE_COPIED=1 ;;
+    renovate.json) RENOVATE_COPIED=1 ;;
+    esac
 done
+
+# ──────────────────────────────────────────────────────────────
+# Language detection (by canonical manifest presence)
+# ──────────────────────────────────────────────────────────────
+HAS_RUST=0
+HAS_NODE=0
+HAS_PYTHON=0
+HAS_DOCKER=0
+
+[ -f "$TARGET_DIR/Cargo.toml" ]         && HAS_RUST=1
+[ -f "$TARGET_DIR/package.json" ]       && HAS_NODE=1
+{ [ -f "$TARGET_DIR/pyproject.toml" ] \
+    || [ -f "$TARGET_DIR/requirements.txt" ] \
+    || [ -f "$TARGET_DIR/setup.py" ] \
+    || [ -f "$TARGET_DIR/setup.cfg" ]; } && HAS_PYTHON=1
+{ [ -f "$TARGET_DIR/Dockerfile" ] \
+    || [ -f "$TARGET_DIR/Dockerfile.org" ] \
+    || ls "$TARGET_DIR"/Dockerfile.* >/dev/null 2>&1; } && HAS_DOCKER=1
+
+detected=""
+[ "$HAS_RUST"   = 1 ] && detected="$detected rust"
+[ "$HAS_NODE"   = 1 ] && detected="$detected node"
+[ "$HAS_PYTHON" = 1 ] && detected="$detected python"
+[ "$HAS_DOCKER" = 1 ] && detected="$detected docker"
+if [ -n "$detected" ]; then
+    info "Detected languages:${detected}"
+else
+    info "No extra languages detected (base config only)"
+fi
+
+# ──────────────────────────────────────────────────────────────
+# Patch flake.nix toggles (only if we just copied it)
+# ──────────────────────────────────────────────────────────────
+patch_flake_toggle() {
+    key="$1"     # e.g. check_rust
+    value="$2"   # true|false
+    file="$3"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '🧪 DRY-RUN › sed -i s/%s = .*/%s = %s;/ %s\n' "$key" "$key" "$value" "$file"
+    else
+        # Match optional leading whitespace, preserve it
+        sed -i -E "s/^([[:space:]]*)${key}[[:space:]]*=[[:space:]]*(true|false);/\\1${key} = ${value};/" "$file"
+    fi
+}
+
+if [ "$FLAKE_COPIED" -eq 1 ] && [ -f "$TARGET_DIR/flake.nix" ]; then
+    info "Patching flake.nix language toggles"
+    [ "$HAS_RUST"   = 1 ] && { patch_flake_toggle check_rust   true  "$TARGET_DIR/flake.nix"; info "  check_rust   = true"; }
+    [ "$HAS_DOCKER" = 1 ] && { patch_flake_toggle check_docker true  "$TARGET_DIR/flake.nix"; info "  check_docker = true"; }
+    [ "$HAS_PYTHON" = 1 ] && { patch_flake_toggle check_python true  "$TARGET_DIR/flake.nix"; info "  check_python = true"; }
+    if [ "$HAS_NODE" = 1 ]; then
+        warn "Node project detected — pre-commit-checks has no canonical node toggle."
+        warn "Review flake.nix manually (consider nodejs + prettier/eslint in devShell buildInputs)."
+    fi
+elif [ "$FLAKE_COPIED" -eq 0 ] && [ -f "$TARGET_DIR/flake.nix" ]; then
+    warn "flake.nix was pre-existing — skipping toggle patches (re-run with --force=files to overwrite)"
+fi
+
+# ──────────────────────────────────────────────────────────────
+# Patch renovate.json enabledManagers (only if we just copied it)
+# ──────────────────────────────────────────────────────────────
+patch_renovate_managers() {
+    file="$1"
+    shift
+    extra_managers="$*"
+    [ -z "$extra_managers" ] && return 0
+
+    if ! command -v jq >/dev/null 2>&1; then
+        warn "jq not found — cannot patch renovate.json. Add these managers manually: $extra_managers"
+        return 0
+    fi
+
+    # Build a JSON array from space-separated names (intentional word-splitting).
+    # shellcheck disable=SC2086
+    to_add=$(printf '%s\n' $extra_managers | jq -R . | jq -s .)
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '🧪 DRY-RUN › jq merge enabledManagers += %s in %s\n' "$to_add" "$file"
+        return 0
+    fi
+
+    tmp=$(mktemp)
+    jq --argjson add "$to_add" '
+        .enabledManagers = ((.enabledManagers // []) + $add | unique)
+    ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
+if [ "$RENOVATE_COPIED" -eq 1 ] && [ -f "$TARGET_DIR/renovate.json" ]; then
+    extra=""
+    [ "$HAS_RUST"   = 1 ] && extra="$extra cargo"
+    [ "$HAS_NODE"   = 1 ] && extra="$extra npm"
+    [ "$HAS_PYTHON" = 1 ] && extra="$extra pep621 pip_requirements"
+    if [ -n "$extra" ]; then
+        info "Extending renovate.json enabledManagers:$extra"
+        # Intentional word-splitting: $extra is a space-separated list of managers.
+        # shellcheck disable=SC2086
+        patch_renovate_managers "$TARGET_DIR/renovate.json" $extra
+    else
+        info "renovate.json: no language-specific managers to add"
+    fi
+elif [ "$RENOVATE_COPIED" -eq 0 ] && [ -f "$TARGET_DIR/renovate.json" ]; then
+    warn "renovate.json was pre-existing — skipping manager patches (re-run with --force=files to overwrite)"
+fi
 
 # ──────────────────────────────────────────────────────────────
 # Copy source stubs

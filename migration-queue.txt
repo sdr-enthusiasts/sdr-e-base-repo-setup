@@ -32,9 +32,9 @@ docker-adsb-ultrafeeder
 docker-ais-dispatcher
 docker-api2sbs
 docker-aprs-tracker
-docker-baseimage
+docker-baseimage ✅
 docker-beast-splitter
-docker-dump978
+docker-dump978 ✅
 docker-dumphfdl ✅
 docker-hfdlobserver ✅
 docker-piaware ✅
@@ -43,7 +43,7 @@ docker-planefinder
 docker-radar1090 ✅
 docker-radarvirtuel
 docker-reversewebproxy
-docker-rtlsdrairband
+docker-rtlsdrairband ✅
 docker-sdrmap ✅
 docker-sdrplay-beast1090
 docker-shipfeeder

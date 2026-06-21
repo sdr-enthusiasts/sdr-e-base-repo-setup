@@ -1,0 +1,64 @@
+# ── 0. Pick next repo from the queue ───────────────────────────────
+
+export REPO=docker-radar1090
+cd ~/GitHub/$REPO
+
+# ── 1. Migrate the files (creates 'infra' branch, copies template,
+#      detects languages, patches flake.nix + renovate.json, removes
+#      legacy .pre-commit-config.yaml) ────────────────────────────
+
+~/GitHub/sdr-e-base-repo-setup/copy_nix_files.sh
+
+# Optional dry-run first:
+#   ~/GitHub/sdr-e-base-repo-setup/copy_nix_files.sh --dry-run
+# ── 2. Audit + manually clean up legacy workflows ─────────────────
+
+~/GitHub/sdr-e-base-repo-setup/audit_workflows.sh | \
+    awk -v r="$REPO" '$0 ~ r'         # or just read the full report
+
+# Known-bad files (delete them on the infra branch):
+#   .github/workflows/cancel_dupes.yml
+#   .github/workflows/pre-commit-updates.yaml
+#   .github/dependabot.yml  (or .yaml)
+# Also review anything flagged as "manual audit required" and remove
+# per-tool lint workflows (hadolint/markdownlint/yamllint/shellcheck/
+# on_pr/linting) — lint.yaml supersedes them.
+
+git rm .github/workflows/cancel_dupes.yml 2>/dev/null || true
+git rm .github/workflows/pre-commit-updates.yaml 2>/dev/null || true
+git rm .github/dependabot.yml .github/dependabot.yaml 2>/dev/null || true
+
+# ── 3. Sanity check the dev shell locally ─────────────────────────
+direnv allow        # if not already done by the migrate script
+nix flake check     # catches flake.nix syntax / pre-commit-checks wiring
+pre-commit run --all-files   # expect some auto-fixes on first run
+
+# ── 4. Commit + push the infra branch ─────────────────────────────
+
+git add -A
+git commit -m "chore(infra): migrate to fredsystems pre-commit + renovate"
+git push -u origin infra
+
+# ── 5. Open the PR ────────────────────────────────────────────────
+
+gh pr create --fill --base main --head infra
+
+# ── 6. WAIT for all workflows to run at least once on the PR ──────
+# This is the critical step: the ruleset references checks by NAME,
+# and GitHub only knows a check's name after it has been observed.
+# Watch until Lint + Test Build Summary (and any others) complete:
+
+gh pr checks --watch
+
+# ── 7. Merge the PR (auto-merge is now enabled org-wide via step 8,
+#      but for the very first repo it is still a manual merge) ────
+
+gh pr merge --squash --delete-branch
+
+# ── 8. Apply repo settings + ruleset ──────────────────────────────
+# Enables auto-merge, disables web_commit_signoff_required, and
+# installs the Default ruleset (skipped if one already exists).
+
+~/GitHub/sdr-e-base-repo-setup/apply_repo_settings.sh "$REPO"
+
+9: PAT!

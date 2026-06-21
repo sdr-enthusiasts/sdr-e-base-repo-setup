@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────────────────────────
+# SDR-Enthusiasts migration queue
+# ─────────────────────────────────────────────────────────────────────
+# One repo per line, ordered by complexity (simplest → most complex).
+# Group headers are comments; strip with:
+#     grep -vE '^\s*(#|$)' migration-queue.txt
+#
+# Complexity tiers:
+#   tier 0 — base only      (no Docker / Rust / Node / Python)
+#   tier 1 — docker-only
+#   tier 2 — python (+docker if present)
+#   tier 3 — rust   (+docker if present)
+#   tier 4 — node   (+docker if present)
+#   tier 5 — multi-language (handle last, may need manual touch-up)
+#
+# Each line is just the repo name. The migration script operates from
+# inside the repo dir, so run it from ~/GitHub/<repo-name>.
+# ─────────────────────────────────────────────────────────────────────
+
+# ── Tier 0 — base only (7) ───────────────────────────────────────────
+acars-guide ✅
+docker-install ✅
+gitbook-adsb-guide ✅
+install-libsdrplay (note: we should have automation to catch upstream updates)
+plane-alert-db
+sdr-enthusiast-assets
+sdre-bias-t-common
+
+# ── Tier 1 — docker-only (24) ────────────────────────────────────────
+airspy_adsb ✅
+docker-adsb-ultrafeeder
+docker-ais-dispatcher
+docker-api2sbs
+docker-aprs-tracker
+docker-baseimage
+docker-beast-splitter
+docker-dump978
+docker-dumphfdl ✅
+docker-hfdlobserver ✅
+docker-piaware ✅
+docker-planefence
+docker-planefinder
+docker-radar1090
+docker-radarvirtuel
+docker-reversewebproxy
+docker-rtlsdrairband
+docker-sdrmap
+docker-sdrplay-beast1090
+docker-shipfeeder
+docker-tar1090
+docker-telegraf-adsb
+docker-vesselalert
+docker-virtualradarserver
+
+# ── Tier 2 — python (1) ──────────────────────────────────────────────
+# browser-screenshot-service is python + docker
+browser-screenshot-service
+
+# ── Tier 3 — rust (5) ────────────────────────────────────────────────
+# sdre-rust-logging and sdre-stubborn-io are pure rust libs
+# sdre-rust-adsb-parser is a pure rust lib
+# acars-oxide and acars_router are rust + docker binaries
+sdre-rust-logging
+sdre-stubborn-io
+sdre-rust-adsb-parser
+acars-oxide
+acars_router
+
+# ── Tier 4 — node (1) ────────────────────────────────────────────────
+# sdre-image-api uses a custom flake.nix (pnpm/vercel/prisma).
+# Treat as manual: the generated flake.nix will not cover its needs.
+sdre-image-api

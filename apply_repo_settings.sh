@@ -27,51 +27,57 @@ REPO=""
 # Required status check contexts
 REQUIRED_CHECKS='[
   {"context": "Lint"},
-  {"context": "Test Build Summary"}
+  {"context": "Require test_build success"}
 ]'
 
 # ──────────────────────────────────────────────────────────────
 # Arg parsing
 # ──────────────────────────────────────────────────────────────
 for arg in "$@"; do
-  case "$arg" in
-    -n|--dry-run) DRY_RUN=1 ;;
-    --org=*)      ORG="${arg#*=}" ;;
-    -h|--help)
-      sed -n '1,20p' "$0" | sed 's/^# \{0,1\}//'
-      exit 0
-      ;;
+    case "$arg" in
+    -n | --dry-run) DRY_RUN=1 ;;
+    --org=*) ORG="${arg#*=}" ;;
+    -h | --help)
+        sed -n '1,20p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
     -*)
-      printf '❌ Unknown flag: %s\n' "$arg" >&2
-      exit 1
-      ;;
-    *)
-      if [ -z "$REPO" ]; then
-        REPO="$arg"
-      else
-        printf '❌ Multiple repo names given. Specify one.\n' >&2
+        printf '❌ Unknown flag: %s\n' "$arg" >&2
         exit 1
-      fi
-      ;;
-  esac
+        ;;
+    *)
+        if [ -z "$REPO" ]; then
+            REPO="$arg"
+        else
+            printf '❌ Multiple repo names given. Specify one.\n' >&2
+            exit 1
+        fi
+        ;;
+    esac
 done
 
-[ -n "$REPO" ] || { printf '❌ Usage: %s <repo-name>\n' "$0" >&2; exit 1; }
+[ -n "$REPO" ] || {
+    printf '❌ Usage: %s <repo-name>\n' "$0" >&2
+    exit 1
+}
 
 # ──────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────
 info() { printf 'ℹ️  %s\n' "$1"; }
-ok()   { printf '✅ %s\n' "$1"; }
+ok() { printf '✅ %s\n' "$1"; }
 warn() { printf '⚠️  %s\n' "$1"; }
-die()  { printf '❌ %s\n' "$1" >&2; exit 1; }
+die() {
+    printf '❌ %s\n' "$1" >&2
+    exit 1
+}
 
 run_gh() {
-  if [ "$DRY_RUN" -eq 1 ]; then
-    printf '🧪 DRY-RUN › gh %s\n' "$*"
-  else
-    gh "$@"
-  fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '🧪 DRY-RUN › gh %s\n' "$*"
+    else
+        gh "$@"
+    fi
 }
 
 # ──────────────────────────────────────────────────────────────
@@ -101,24 +107,24 @@ info "  web_commit_signoff_required = $signoff"
 need_patch=0
 patch_body='{}'
 if [ "$auto_merge" != "true" ]; then
-  patch_body=$(printf '%s' "$patch_body" | jq '.allow_auto_merge = true')
-  need_patch=1
+    patch_body=$(printf '%s' "$patch_body" | jq '.allow_auto_merge = true')
+    need_patch=1
 fi
 if [ "$signoff" != "false" ]; then
-  patch_body=$(printf '%s' "$patch_body" | jq '.web_commit_signoff_required = false')
-  need_patch=1
+    patch_body=$(printf '%s' "$patch_body" | jq '.web_commit_signoff_required = false')
+    need_patch=1
 fi
 
 if [ "$need_patch" -eq 1 ]; then
-  info "Patching repo settings: $patch_body"
-  if [ "$DRY_RUN" -eq 1 ]; then
-    printf '🧪 DRY-RUN › gh api -X PATCH repos/%s/%s --input -\n' "$ORG" "$REPO"
-  else
-    printf '%s' "$patch_body" | gh api -X PATCH "repos/$ORG/$REPO" --input - >/dev/null
-  fi
-  ok "Repo settings updated"
+    info "Patching repo settings: $patch_body"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        printf '🧪 DRY-RUN › gh api -X PATCH repos/%s/%s --input -\n' "$ORG" "$REPO"
+    else
+        printf '%s' "$patch_body" | gh api -X PATCH "repos/$ORG/$REPO" --input - >/dev/null
+    fi
+    ok "Repo settings updated"
 else
-  ok "Repo settings already correct — no changes needed"
+    ok "Repo settings already correct — no changes needed"
 fi
 echo
 
@@ -130,10 +136,10 @@ existing=$(gh api "repos/$ORG/$REPO/rulesets" 2>/dev/null || echo '[]')
 count=$(printf '%s' "$existing" | jq 'length')
 
 if [ "$count" -gt 0 ]; then
-  names=$(printf '%s' "$existing" | jq -r '.[].name' | paste -sd, -)
-  warn "Ruleset(s) already present on $ORG/$REPO: $names"
-  warn "Ruleset step SKIPPED — not applied."
-  exit 0
+    names=$(printf '%s' "$existing" | jq -r '.[].name' | paste -sd, -)
+    warn "Ruleset(s) already present on $ORG/$REPO: $names"
+    warn "Ruleset step SKIPPED — not applied."
+    exit 0
 fi
 
 info "No existing rulesets. Creating 'Default'..."
@@ -166,11 +172,11 @@ ruleset_body=$(jq -n --argjson checks "$REQUIRED_CHECKS" '{
 }')
 
 if [ "$DRY_RUN" -eq 1 ]; then
-  printf '🧪 DRY-RUN › gh api -X POST repos/%s/%s/rulesets --input -\n' "$ORG" "$REPO"
-  printf '🧪 Payload:\n%s\n' "$ruleset_body"
+    printf '🧪 DRY-RUN › gh api -X POST repos/%s/%s/rulesets --input -\n' "$ORG" "$REPO"
+    printf '🧪 Payload:\n%s\n' "$ruleset_body"
 else
-  printf '%s' "$ruleset_body" \
-    | gh api -X POST "repos/$ORG/$REPO/rulesets" --input - >/dev/null
+    printf '%s' "$ruleset_body" |
+        gh api -X POST "repos/$ORG/$REPO/rulesets" --input - >/dev/null
 fi
 ok "Ruleset 'Default' created"
 echo

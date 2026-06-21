@@ -40,11 +40,11 @@ docker-hfdlobserver ✅
 docker-piaware ✅
 docker-planefence
 docker-planefinder
-docker-radar1090
+docker-radar1090 ✅
 docker-radarvirtuel
 docker-reversewebproxy
 docker-rtlsdrairband
-docker-sdrmap
+docker-sdrmap ✅
 docker-sdrplay-beast1090
 docker-shipfeeder
 docker-tar1090

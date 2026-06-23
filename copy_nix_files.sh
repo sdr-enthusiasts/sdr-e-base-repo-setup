@@ -70,6 +70,7 @@ flake.nix
 .envrc
 .github/workflows/lint.yaml
 renovate-base.json:renovate.json
+.dictionary.txt
 "
 
 # ──────────────────────────────────────────────────────────────
@@ -181,7 +182,7 @@ for entry in $FILES; do
     info "File copied: $src_rel → $dst_rel"
 
     case "$dst_rel" in
-    flake.nix)     FLAKE_COPIED=1 ;;
+    flake.nix) FLAKE_COPIED=1 ;;
     renovate.json) RENOVATE_COPIED=1 ;;
     esac
 done
@@ -194,19 +195,19 @@ HAS_NODE=0
 HAS_PYTHON=0
 HAS_DOCKER=0
 
-[ -f "$TARGET_DIR/Cargo.toml" ]         && HAS_RUST=1
-[ -f "$TARGET_DIR/package.json" ]       && HAS_NODE=1
-{ [ -f "$TARGET_DIR/pyproject.toml" ] \
-    || [ -f "$TARGET_DIR/requirements.txt" ] \
-    || [ -f "$TARGET_DIR/setup.py" ] \
-    || [ -f "$TARGET_DIR/setup.cfg" ]; } && HAS_PYTHON=1
-{ [ -f "$TARGET_DIR/Dockerfile" ] \
-    || [ -f "$TARGET_DIR/Dockerfile.org" ] \
-    || ls "$TARGET_DIR"/Dockerfile.* >/dev/null 2>&1; } && HAS_DOCKER=1
+[ -f "$TARGET_DIR/Cargo.toml" ] && HAS_RUST=1
+[ -f "$TARGET_DIR/package.json" ] && HAS_NODE=1
+{ [ -f "$TARGET_DIR/pyproject.toml" ] ||
+    [ -f "$TARGET_DIR/requirements.txt" ] ||
+    [ -f "$TARGET_DIR/setup.py" ] ||
+    [ -f "$TARGET_DIR/setup.cfg" ]; } && HAS_PYTHON=1
+{ [ -f "$TARGET_DIR/Dockerfile" ] ||
+    [ -f "$TARGET_DIR/Dockerfile.org" ] ||
+    ls "$TARGET_DIR"/Dockerfile.* >/dev/null 2>&1; } && HAS_DOCKER=1
 
 detected=""
-[ "$HAS_RUST"   = 1 ] && detected="$detected rust"
-[ "$HAS_NODE"   = 1 ] && detected="$detected node"
+[ "$HAS_RUST" = 1 ] && detected="$detected rust"
+[ "$HAS_NODE" = 1 ] && detected="$detected node"
 [ "$HAS_PYTHON" = 1 ] && detected="$detected python"
 [ "$HAS_DOCKER" = 1 ] && detected="$detected docker"
 if [ -n "$detected" ]; then
@@ -219,8 +220,8 @@ fi
 # Patch flake.nix toggles (only if we just copied it)
 # ──────────────────────────────────────────────────────────────
 patch_flake_toggle() {
-    key="$1"     # e.g. check_rust
-    value="$2"   # true|false
+    key="$1"   # e.g. check_rust
+    value="$2" # true|false
     file="$3"
     if [ "$DRY_RUN" -eq 1 ]; then
         printf '🧪 DRY-RUN › sed -i s/%s = .*/%s = %s;/ %s\n' "$key" "$key" "$value" "$file"
@@ -232,9 +233,18 @@ patch_flake_toggle() {
 
 if [ "$FLAKE_COPIED" -eq 1 ] && [ -f "$TARGET_DIR/flake.nix" ]; then
     info "Patching flake.nix language toggles"
-    [ "$HAS_RUST"   = 1 ] && { patch_flake_toggle check_rust   true  "$TARGET_DIR/flake.nix"; info "  check_rust   = true"; }
-    [ "$HAS_DOCKER" = 1 ] && { patch_flake_toggle check_docker true  "$TARGET_DIR/flake.nix"; info "  check_docker = true"; }
-    [ "$HAS_PYTHON" = 1 ] && { patch_flake_toggle check_python true  "$TARGET_DIR/flake.nix"; info "  check_python = true"; }
+    [ "$HAS_RUST" = 1 ] && {
+        patch_flake_toggle check_rust true "$TARGET_DIR/flake.nix"
+        info "  check_rust   = true"
+    }
+    [ "$HAS_DOCKER" = 1 ] && {
+        patch_flake_toggle check_docker true "$TARGET_DIR/flake.nix"
+        info "  check_docker = true"
+    }
+    [ "$HAS_PYTHON" = 1 ] && {
+        patch_flake_toggle check_python true "$TARGET_DIR/flake.nix"
+        info "  check_python = true"
+    }
     if [ "$HAS_NODE" = 1 ]; then
         warn "Node project detected — pre-commit-checks has no canonical node toggle."
         warn "Review flake.nix manually (consider nodejs + prettier/eslint in devShell buildInputs)."
@@ -269,13 +279,13 @@ patch_renovate_managers() {
     tmp=$(mktemp)
     jq --argjson add "$to_add" '
         .enabledManagers = ((.enabledManagers // []) + $add | unique)
-    ' "$file" > "$tmp" && mv "$tmp" "$file"
+    ' "$file" >"$tmp" && mv "$tmp" "$file"
 }
 
 if [ "$RENOVATE_COPIED" -eq 1 ] && [ -f "$TARGET_DIR/renovate.json" ]; then
     extra=""
-    [ "$HAS_RUST"   = 1 ] && extra="$extra cargo"
-    [ "$HAS_NODE"   = 1 ] && extra="$extra npm"
+    [ "$HAS_RUST" = 1 ] && extra="$extra cargo"
+    [ "$HAS_NODE" = 1 ] && extra="$extra npm"
     [ "$HAS_PYTHON" = 1 ] && extra="$extra pep621 pip_requirements"
     if [ -n "$extra" ]; then
         info "Extending renovate.json enabledManagers:$extra"

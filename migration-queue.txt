@@ -28,9 +28,8 @@ sdre-bias-t-common
 
 # ── Tier 1 — docker-only (24) ────────────────────────────────────────
 airspy_adsb ✅
-docker-adsb-ultrafeeder
-docker-ais-dispatcher
-docker-api2sbs
+docker-adsb-ultrafeeder ✅
+docker-api2sbs ✅
 docker-aprs-tracker
 docker-baseimage ✅
 docker-beast-splitter
@@ -38,19 +37,20 @@ docker-dump978 ✅
 docker-dumphfdl ✅
 docker-hfdlobserver ✅
 docker-piaware ✅
-docker-planefence
+docker-planefence ⚠️
 docker-planefinder
 docker-radar1090 ✅
-docker-radarvirtuel
+docker-radarvirtuel ✅
 docker-reversewebproxy
 docker-rtlsdrairband ✅
 docker-sdrmap ✅
-docker-sdrplay-beast1090
+docker-sdrplay-beast1090 ✅
 docker-shipfeeder
-docker-tar1090
-docker-telegraf-adsb
+docker-tar1090 ✅
+docker-telegraf-adsb ✅
 docker-vesselalert
 docker-virtualradarserver
+docker-xng ✅
 
 # ── Tier 2 — python (1) ──────────────────────────────────────────────
 # browser-screenshot-service is python + docker

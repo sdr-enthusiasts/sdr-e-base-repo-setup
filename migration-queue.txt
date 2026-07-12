@@ -23,38 +23,37 @@ docker-install ✅
 gitbook-adsb-guide ✅
 install-libsdrplay (note: we should have automation to catch upstream updates)
 plane-alert-db
-sdr-enthusiast-assets
-sdre-bias-t-common
+sdre-bias-t-common ✅
 
 # ── Tier 1 — docker-only (24) ────────────────────────────────────────
 airspy_adsb ✅
 docker-adsb-ultrafeeder ✅
 docker-api2sbs ✅
-docker-aprs-tracker
+docker-aprs-tracker ✅
 docker-baseimage ✅
-docker-beast-splitter
+docker-beast-splitter ✅
 docker-dump978 ✅
 docker-dumphfdl ✅
 docker-hfdlobserver ✅
 docker-piaware ✅
-docker-planefence ⚠️
-docker-planefinder
+docker-planefence ✅
+docker-planefinder ✅
 docker-radar1090 ✅
 docker-radarvirtuel ✅
-docker-reversewebproxy
+docker-reversewebproxy ✅
 docker-rtlsdrairband ✅
 docker-sdrmap ✅
 docker-sdrplay-beast1090 ✅
-docker-shipfeeder
+docker-shipfeeder ✅
 docker-tar1090 ✅
 docker-telegraf-adsb ✅
-docker-vesselalert
-docker-virtualradarserver
+docker-vesselalert ✅
+docker-virtualradarserver ✅
 docker-xng ✅
 
 # ── Tier 2 — python (1) ──────────────────────────────────────────────
 # browser-screenshot-service is python + docker
-browser-screenshot-service
+browser-screenshot-service ✅
 
 # ── Tier 3 — rust (5) ────────────────────────────────────────────────
 # sdre-rust-logging and sdre-stubborn-io are pure rust libs
@@ -63,10 +62,9 @@ browser-screenshot-service
 sdre-rust-logging
 sdre-stubborn-io
 sdre-rust-adsb-parser
-acars-oxide
 acars_router
 
 # ── Tier 4 — node (1) ────────────────────────────────────────────────
 # sdre-image-api uses a custom flake.nix (pnpm/vercel/prisma).
 # Treat as manual: the generated flake.nix will not cover its needs.
-sdre-image-api
+sdre-image-api ✅

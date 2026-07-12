@@ -6,16 +6,22 @@
 #
 #   1. Pick a repo from migration-queue.txt (only repos NOT marked ✅).
 #   2. Run copy_nix_files.sh inside ~/GitHub/<repo>.
-#   3. PAUSE — you manually do the `git rm` of legacy workflows /
-#      dependabot and any audit cleanup. Type "continue" when ready.
+#   2b. Reload direnv for the target repo (avoids stale env leaking
+#       in from this repo's shell — see git history for why).
+#   2c. Auto-remove known legacy files: dependabot config and the
+#       cancel_dupes / pre-commit-updates workflows (.yml or .yaml).
+#   3. PAUSE — you manually remove any remaining per-tool lint
+#      workflows and anything needing audit. Type "continue" when
+#      ready.
 #   4. Verify `pre-commit run --all-files` passes. If it fails, PAUSE
 #      and re-run when you type "continue"; loop until green.
 #   5. git add -A && commit && push -u origin infra.
 #   6. Apply repo settings + ruleset (before the PR).
 #   7. Open the PR, then exit.
 #
-# The git rm cleanup is intentionally NOT automated — that is the
-# manual step in (3).
+# The deterministic legacy-file removal is automated in (2c); the
+# manual step in (3) is for judgment calls (per-tool lint workflows,
+# anything flagged for audit).
 
 set -euo pipefail
 
@@ -107,19 +113,60 @@ step "Migrating files (copy_nix_files.sh)"
 "$COPY_SCRIPT"
 
 # ──────────────────────────────────────────────────────────────
-# 3. Manual cleanup pause (git rm of legacy workflows / dependabot,
-#    audit review). Done by hand — see flow.txt steps 2-3.
+# 2b. Reload direnv for the target repo.
+#     migrate.sh is launched from this repo's own direnv shell, so
+#     PYTHONPATH/PATH/etc. from THIS repo's flake are still exported
+#     for the rest of the script (a plain `cd` inside a non-
+#     interactive script does not trigger direnv's load/unload
+#     hook). If the target repo pins a different nixpkgs revision,
+#     that stale env silently shadows its tool versions (e.g. a
+#     newer check-jsonschema resolving pure-Python deps from an
+#     older, ABI-incompatible rpds-py) and pre-commit hooks fail in
+#     ways that don't reproduce when run manually from a fresh
+#     shell. Force a re-export scoped to $REPO_DIR before running
+#     anything else that depends on its toolchain.
+# ──────────────────────────────────────────────────────────────
+if command -v direnv >/dev/null 2>&1 && [ -f .envrc ]; then
+    step "Reloading direnv for $REPO"
+    unset PYTHONPATH
+    eval "$(direnv export bash)"
+fi
+
+# ──────────────────────────────────────────────────────────────
+# 2c. Auto-remove known legacy files.
+#     dependabot config and the cancel_dupes / pre-commit-updates
+#     workflows are always superseded by the fredsystems setup, so
+#     delete them deterministically here rather than relying on the
+#     manual step. Extension may be .yml or .yaml — check both.
+# ──────────────────────────────────────────────────────────────
+step "Removing known legacy files"
+for f in \
+    .github/dependabot.yml .github/dependabot.yaml \
+    .github/workflows/cancel_dupes.yml .github/workflows/cancel_dupes.yaml \
+    .github/workflows/pre-commit-updates.yml .github/workflows/pre-commit-updates.yaml; do
+    if git ls-files --error-unmatch "$f" >/dev/null 2>&1; then
+        git rm -q "$f"
+        info "Removed $f"
+    elif [ -e "$f" ]; then
+        rm -f "$f"
+        info "Deleted untracked $f"
+    fi
+done
+
+# ──────────────────────────────────────────────────────────────
+# 3. Manual cleanup pause (per-tool lint workflows, audit review).
+#    Done by hand — see flow.txt steps 2-3.
 # ──────────────────────────────────────────────────────────────
 step "Manual cleanup"
 cat <<'EOF'
-Do your manual cleanup now (in another terminal, on the infra branch):
+The known legacy files (dependabot config, cancel_dupes,
+pre-commit-updates workflows) were removed automatically above.
 
-  git rm .github/workflows/cancel_dupes.yml 2>/dev/null || true
-  git rm .github/workflows/pre-commit-updates.yaml 2>/dev/null || true
-  git rm .github/dependabot.yml .github/dependabot.yaml 2>/dev/null || true
+Do the rest of your manual cleanup now (in another terminal, on the
+infra branch):
 
-Also remove any per-tool lint workflows (hadolint/markdownlint/yamllint/
-shellcheck/on_pr/linting) and anything flagged for manual audit.
+  Remove any per-tool lint workflows (hadolint/markdownlint/yamllint/
+  shellcheck/on_pr/linting) and anything flagged for manual audit.
 EOF
 wait_for_continue "Done with manual cleanup?"
 
